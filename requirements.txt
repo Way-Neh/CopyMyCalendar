@@ -1,0 +1,4 @@
+pyobjc-framework-EventKit>=10.0
+pyyaml>=6.0
+rich>=13.0.0
+python-dateutil>=2.8.2

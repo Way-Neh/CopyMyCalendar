@@ -1,0 +1,17 @@
+# Mac Calendar to Gmail (In-App) Sync Configuration
+
+# The source calendar in your Mac Calendar app (e.g., "Work", "Personal", "iCloud")
+source_calendar_name: "Work"
+
+# The target Gmail calendar in your Mac Calendar app (e.g., "Google", "Gmail - Work", "Personal")
+target_calendar_name: "Gmail - Work"
+
+# Sync time window (in days)
+rolling_days_past: 30
+rolling_days_future: 180
+
+# Background sync interval in minutes (for launchd service)
+sync_interval_minutes: 15
+
+# Local SQLite state database path
+state_db_file: "sync_state.db"
