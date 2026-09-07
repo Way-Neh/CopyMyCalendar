@@ -83,9 +83,25 @@ class MacCalendarClient:
     def _ensure_access(self):
         if not self._authorized:
             if not self.request_access():
+                status = 0
+                if EVENTKIT_AVAILABLE and hasattr(EventKit, "EKEventStore"):
+                    status = EventKit.EKEventStore.authorizationStatusForEntityType_(0)
+                status_names = {
+                    0: "Not Determined (Prompt was dismissed or not granted)",
+                    1: "Restricted (Managed device / parental controls)",
+                    2: "Denied (Explicitly disabled)",
+                    3: "Authorized / Full Access",
+                    4: "Write-Only Access"
+                }
+                status_str = status_names.get(status, f"Status code {status}")
                 raise PermissionError(
-                    "Calendar access was denied by macOS.\n"
-                    "Please enable Calendar permissions in System Settings -> Privacy & Security -> Calendars."
+                    f"Calendar access was denied by macOS (EKAuthorizationStatus: {status_str}).\n"
+                    "macOS Transparency, Consent, and Control (TCC) requires Calendar permission for the hosting process.\n"
+                    "To resolve this:\n"
+                    "  1. Open System Settings -> Privacy & Security -> Calendars.\n"
+                    "  2. Ensure your Terminal application (e.g., Terminal, iTerm2, VS Code, or Python) is toggled ON with 'Full Access'.\n"
+                    "  3. If already toggled on, toggle it OFF and back ON, or reset with: tccutil reset Calendar\n"
+                    "  4. If running as a LaunchAgent or daemon, ensure the responsible shell/app has Calendar permissions."
                 )
 
     def get_calendars(self, include_event_counts: bool = False) -> List[Dict[str, Any]]:
