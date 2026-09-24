@@ -12,7 +12,7 @@
 <p align="center">
   <a href="https://www.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-12.0%2B%20(Monterey%20%7C%20Ventura%20%7C%20Sonoma%20%7C%20Sequoia)-black?logo=apple&logoColor=white" alt="macOS" /></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/Python-3.9%2B-blue.svg?logo=python&logoColor=white" alt="Python" /></a>
-  <a href="https://github.com/Way-Neh/SendtoGMAIL/releases"><img src="https://img.shields.io/badge/Release-v2.0.0-success.svg?logo=github" alt="Release" /></a>
+  <a href="https://github.com/Way-Neh/CopyMyCalendar/releases"><img src="https://img.shields.io/badge/Release-v2.0.0-success.svg?logo=github" alt="Release" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License" /></a>
   <a href="https://diataxis.fr/"><img src="https://img.shields.io/badge/docs-Diátaxis-brightgreen.svg" alt="Diátaxis Docs" /></a>
 </p>
@@ -61,7 +61,7 @@ Your personal calendar stays updated with your availability, while your company'
 
 ### Option 1: Standalone macOS App (Recommended)
 
-1. Download the latest **`CalendarSync-v2.0.0-macOS.dmg`** from [GitHub Releases](https://github.com/Way-Neh/SendtoGMAIL/releases).
+1. Download the latest **`CalendarSync-v2.0.0-macOS.dmg`** from [GitHub Releases](https://github.com/Way-Neh/CopyMyCalendar/releases).
 2. Open the `.dmg` and drag **`CalendarSync.app`** into your **`Applications`** folder.
 3. Launch **CalendarSync** from Spotlight or Applications.
 4. Click the CalendarSync icon in your Menu Bar, select your **Source Calendar** (Work/Outlook) and **Target Calendar** (Google/Gmail), and click **Save Settings**!
@@ -82,8 +82,8 @@ For developers wanting to run from source or automate via Terminal:
 
 ```bash
 # Clone the repository
-git clone https://github.com/Way-Neh/SendtoGMAIL.git
-cd SendtoGMAIL
+git clone https://github.com/Way-Neh/CopyMyCalendar.git
+cd CopyMyCalendar
 
 # Set up Python virtual environment
 python3 -m venv venv
