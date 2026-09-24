@@ -110,3 +110,35 @@ manager = LaunchdManager(project_dir="...", python_path="...", interval_minutes=
 - **`install() -> str`**: Writes LaunchAgent plist and invokes `launchctl bootstrap`.
 - **`uninstall() -> bool`**: Unloads service and removes plist file.
 - **`get_status() -> Dict[str, Any]`**: Checks if plist is installed and loaded into `launchctl`.
+
+---
+
+## 4. `outlook_calendar.py`
+
+Interacts with Microsoft Outlook on macOS using AppleScript / `NSAppleScript`.
+
+### `class OutlookCalendarClient`
+
+```python
+client = OutlookCalendarClient()
+```
+
+#### Methods
+
+- **`is_outlook_running() -> bool`**
+  Checks whether the Microsoft Outlook process is running.
+- **`get_calendars() -> List[Dict[str, Any]]`**
+  Returns list of calendars configured in Microsoft Outlook.
+- **`get_events(calendar_name: str, start_date: datetime, end_date: datetime) -> List[Dict[str, Any]]`**
+  Fetches and expands single and recurring occurrences within `[start_date, end_date]`.
+
+---
+
+## 5. `gui_app.py`
+
+Native macOS Cocoa Menu Bar application.
+
+### `class CalendarSyncApp`
+
+Implements the status bar icon, preference window, vibrant visual effect views, live logs viewer, and background scheduler.
+

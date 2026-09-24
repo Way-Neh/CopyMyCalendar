@@ -58,3 +58,6 @@ sync_events.log
 .vscode/
 *.swp
 *.swo
+events_dump.txt
+*.spec
+*.app

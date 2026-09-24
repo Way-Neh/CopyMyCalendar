@@ -34,7 +34,7 @@ state_db_file: "sync_state.db"
 
 | Field | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `source_calendar_id` | String | **Yes** | - | The unique macOS `calendarIdentifier` for the source calendar. |
+| `source_calendar_id` | String | **Yes** | - | Unique identifier for the source calendar. Supports macOS EventKit UUIDs (e.g. `0151F250-...`) or Microsoft Outlook IDs prefixed with `outlook:` (e.g. `outlook:141`). |
 | `source_calendar_name` | String | No | `"Work"` | Informative name displayed in logs and summaries. |
 | `source_calendar_account` | String | No | `"Local"` | Account / Provider name (e.g. Exchange, iCloud). |
 | `target_calendar_id` | String | **Yes** | - | The unique macOS `calendarIdentifier` for the target Gmail calendar. |

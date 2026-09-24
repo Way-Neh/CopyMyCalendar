@@ -16,6 +16,7 @@ for _sp in _site_packages:
         sys.path.insert(0, _sp)
 
 import time
+import logging
 import argparse
 import yaml
 from pathlib import Path
@@ -30,6 +31,7 @@ from mac_calendar import MacCalendarClient
 from sync_engine import SyncStateStore, SyncEngine, SYNC_LOG_FILE
 from launchd_manager import LaunchdManager
 
+logger = logging.getLogger("sync")
 console = Console()
 CONFIG_FILE = "config.yaml"
 
@@ -60,17 +62,43 @@ def save_config(config_data: dict, config_path: str = CONFIG_FILE):
         yaml.dump(config_data, f, default_flow_style=False)
 
 
-def cmd_list_calendars(args):
-    """List all available calendars in macOS Calendar app with unique IDs and event counts."""
-    console.print("[bold blue]Connecting to macOS Calendar Store and scanning event counts...[/bold blue]")
-    client = MacCalendarClient()
+def get_all_available_calendars(include_event_counts: bool = True) -> list:
+    """Retrieve all calendars available across EventKit (macOS Calendar) and Microsoft Outlook."""
+    calendars = []
+    
+    # 1. EventKit
     try:
-        calendars = client.get_calendars(include_event_counts=True)
+        client = MacCalendarClient()
+        cals = client.get_calendars(include_event_counts=include_event_counts)
+        calendars.extend(cals)
     except Exception as e:
-        console.print(f"[bold red]Error accessing macOS Calendars:[/bold red] {e}")
+        logger_name = logging.getLogger("sync")
+        logger_name.debug(f"EventKit access note: {e}")
+
+    # 2. Microsoft Outlook
+    try:
+        from outlook_calendar import OutlookCalendarClient
+        out_client = OutlookCalendarClient()
+        if out_client.is_available():
+            out_cals = out_client.get_calendars(include_event_counts=include_event_counts)
+            calendars.extend(out_cals)
+    except Exception as e:
+        logger_name = logging.getLogger("sync")
+        logger_name.debug(f"Outlook access note: {e}")
+
+    return calendars
+
+
+def cmd_list_calendars(args):
+    """List all available calendars in macOS Calendar app and Microsoft Outlook with unique IDs and event counts."""
+    console.print("[bold blue]Connecting to macOS Calendar Store & Microsoft Outlook...[/bold blue]")
+    calendars = get_all_available_calendars(include_event_counts=True)
+
+    if not calendars:
+        console.print("[bold red]No calendars found in macOS Calendar or Microsoft Outlook.[/bold red]")
         return 1
 
-    table = Table(title="macOS Calendars Available", show_header=True, header_style="bold magenta")
+    table = Table(title="Available Calendars (macOS Calendar & Outlook)", show_header=True, header_style="bold magenta")
     table.add_column("#", style="dim", width=4)
     table.add_column("Account / Source", style="cyan")
     table.add_column("Calendar Title", style="bold green")
@@ -78,7 +106,8 @@ def cmd_list_calendars(args):
     table.add_column("Unique Identifier (ID)", style="dim")
 
     for i, cal in enumerate(calendars, 1):
-        count_str = f"{cal.get('event_count_1yr', 0)} events"
+        count = cal.get('event_count_1yr')
+        count_str = f"{count} events" if count is not None else "Ready"
         table.add_row(str(i), cal["source"], cal["title"], count_str, cal["identifier"])
 
     console.print(table)
@@ -89,19 +118,14 @@ def cmd_setup(args):
     """Interactive setup wizard using unique calendar identifiers."""
     console.print(Panel.fit("[bold green]Mac Calendar -> Gmail (In-App) Sync Setup Wizard[/bold green]"))
 
-    client = MacCalendarClient()
-    try:
-        console.print("[dim]Scanning calendars, unique IDs, and event counts...[/dim]")
-        calendars = client.get_calendars(include_event_counts=True)
-    except Exception as e:
-        console.print(f"[bold red]Could not read Mac calendars:[/bold red] {e}")
-        return 1
+    console.print("[dim]Scanning calendars across macOS Calendar and Microsoft Outlook...[/dim]")
+    calendars = get_all_available_calendars(include_event_counts=True)
 
     if not calendars:
-        console.print("[bold red]No calendars found in Mac Calendar app.[/bold red]")
+        console.print("[bold red]No calendars found in Mac Calendar app or Microsoft Outlook.[/bold red]")
         return 1
 
-    table = Table(title="Available Calendars in Mac Calendar App")
+    table = Table(title="Available Calendars (macOS Calendar & Microsoft Outlook)")
     table.add_column("#", style="dim", width=4)
     table.add_column("Account / Source", style="cyan")
     table.add_column("Calendar Name", style="bold green")
@@ -109,7 +133,8 @@ def cmd_setup(args):
     table.add_column("Unique ID", style="dim")
 
     for i, cal in enumerate(calendars, 1):
-        count_str = f"{cal.get('event_count_1yr', 0)} events"
+        count = cal.get('event_count_1yr')
+        count_str = f"{count} events" if count is not None else "Ready"
         table.add_row(str(i), cal["source"], cal["title"], count_str, cal["identifier"][:18] + "...")
     console.print(table)
 
@@ -209,23 +234,35 @@ def cmd_clear_target(args):
 
 
 def cmd_find(args):
-    """Search for a specific event title across ALL calendars on the Mac using machine local time."""
+    """Search for a specific event title across ALL calendars on the Mac and Outlook using machine local time."""
     keyword = args.find or (args.keyword if hasattr(args, "keyword") else "")
-    console.print(f"[bold blue]Searching across ALL Mac calendars for events containing:[/] '[bold green]{keyword}[/]'...")
-    client = MacCalendarClient()
+    console.print(f"[bold blue]Searching across ALL Mac & Outlook calendars for events containing:[/] '[bold green]{keyword}[/]'...")
 
     now = datetime.now().astimezone()
     start_date = now - timedelta(days=3650)
     end_date = now + timedelta(days=3650)
+    matches = []
 
+    # Search EventKit
     try:
-        matches = client.search_all_calendars(keyword, start_date, end_date)
+        client = MacCalendarClient()
+        matches.extend(client.search_all_calendars(keyword, start_date, end_date))
     except Exception as e:
-        console.print(f"[bold red]Search error:[/bold red] {e}")
-        return 1
+        logger_name = logging.getLogger("sync")
+        logger_name.debug(f"EventKit search error: {e}")
+
+    # Search Outlook
+    try:
+        from outlook_calendar import OutlookCalendarClient
+        out_client = OutlookCalendarClient()
+        if out_client.is_available():
+            matches.extend(out_client.search_all_calendars(keyword, start_date, end_date))
+    except Exception as e:
+        logger_name = logging.getLogger("sync")
+        logger_name.debug(f"Outlook search error: {e}")
 
     if not matches:
-        console.print(f"[yellow]No events found matching '{keyword}' across any calendar on this Mac.[/yellow]")
+        console.print(f"[yellow]No events found matching '{keyword}' across any calendar on this Mac or Outlook.[/yellow]")
         return 0
 
     table = Table(title=f"Search Results for '{keyword}' ({len(matches)} found)")
@@ -264,7 +301,12 @@ def cmd_dump_events(args):
     output_file = "events_dump.txt"
     console.print(f"[bold blue]Dumping all events from '{source_name}' [ID: {source_id}] to '{output_file}'...[/bold blue]")
 
-    client = MacCalendarClient()
+    if str(source_id).startswith("outlook:") or (str(source_id).isdigit() and len(str(source_id)) < 8):
+        from outlook_calendar import OutlookCalendarClient
+        client = OutlookCalendarClient()
+    else:
+        client = MacCalendarClient()
+
     now = datetime.now().astimezone()
     start_date = now - timedelta(days=days_past)
     end_date = now + timedelta(days=days_future)
@@ -537,9 +579,15 @@ def main():
     # status
     subparsers.add_parser("status", help="Check current sync status and background agent")
 
+    # app / gui
+    subparsers.add_parser("app", help="Launch native macOS menu bar app")
+    subparsers.add_parser("gui", help="Launch native macOS menu bar app")
+
     # Direct flag support
     parser.add_argument("--list-calendars", action="store_true", help="List all macOS calendars")
     parser.add_argument("--setup", action="store_true", help="Run setup wizard")
+    parser.add_argument("--app", action="store_true", help="Launch native macOS menu bar app")
+    parser.add_argument("--gui", action="store_true", help="Launch native macOS menu bar app")
     parser.add_argument("--sync", action="store_true", help="Run sync")
     parser.add_argument("--daemon", action="store_true", help="Run sync daemon in loop")
     parser.add_argument("--interval", type=int, help="Interval in minutes for daemon")
@@ -560,7 +608,10 @@ def main():
 
     args = parser.parse_args()
 
-    if args.list_calendars or args.command == "list-calendars":
+    if args.app or args.gui or args.command in ("app", "gui"):
+        from gui_app import main as gui_main
+        return gui_main()
+    elif args.list_calendars or args.command == "list-calendars":
         return cmd_list_calendars(args)
     elif args.setup or args.command == "setup":
         return cmd_setup(args)

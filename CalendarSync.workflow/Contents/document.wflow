@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>AMApplicationBuild</key>
-	<string>523</string>
+	<string>534</string>
 	<key>AMApplicationVersion</key>
 	<string>2.10</string>
 	<key>AMDocumentVersion</key>
@@ -13,6 +13,45 @@
 		<dict>
 			<key>action</key>
 			<dict>
+				<key>AMAccepts</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Optional</key>
+					<true/>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.string</string>
+					</array>
+				</dict>
+				<key>AMActionVersion</key>
+				<string>2.0.3</string>
+				<key>AMApplication</key>
+				<array>
+					<string>Automator</string>
+				</array>
+				<key>AMParameterProperties</key>
+				<dict>
+					<key>COMMAND_STRING</key>
+					<dict/>
+					<key>CheckedForUserDefaultShell</key>
+					<dict/>
+					<key>inputMethod</key>
+					<dict/>
+					<key>shell</key>
+					<dict/>
+					<key>source</key>
+					<dict/>
+				</dict>
+				<key>AMProvides</key>
+				<dict>
+					<key>Container</key>
+					<string>List</string>
+					<key>Types</key>
+					<array>
+						<string>com.apple.cocoa.string</string>
+					</array>
+				</dict>
 				<key>ActionBundlePath</key>
 				<string>/System/Library/Automator/Run Shell Script.action</string>
 				<key>ActionName</key>
@@ -85,8 +124,8 @@ fi
 						<string>0</string>
 						<key>type</key>
 						<string>0</string>
-						<key>value</key>
-						<integer>0</integer>
+						<key>uuid</key>
+						<string>0</string>
 					</dict>
 					<key>1</key>
 					<dict>
@@ -98,8 +137,8 @@ fi
 						<string>0</string>
 						<key>type</key>
 						<string>0</string>
-						<key>value</key>
-						<true/>
+						<key>uuid</key>
+						<string>1</string>
 					</dict>
 					<key>2</key>
 					<dict>
@@ -111,8 +150,8 @@ fi
 						<string>0</string>
 						<key>type</key>
 						<string>0</string>
-						<key>value</key>
-						<string></string>
+						<key>uuid</key>
+						<string>2</string>
 					</dict>
 					<key>3</key>
 					<dict>
@@ -124,19 +163,8 @@ fi
 						<string>0</string>
 						<key>type</key>
 						<string>0</string>
-						<key>value</key>
-						<string>#!/bin/zsh
-DIR="/Users/ap-wayne.tan/DockerProjects/SendtoGMAIL"
-cd ""
-
-export LANG=en_US.UTF-8
-export LC_ALL=en_US.UTF-8
-
-# Start sync daemon in background if not already running
-if ! pgrep -f "sync.py --daemon" &gt; /dev/null; then
-    "/venv/bin/python" "/sync.py" --daemon &gt;&gt; "/daemon.log" 2&gt;&amp;1 &amp;
-fi
-</string>
+						<key>uuid</key>
+						<string>3</string>
 					</dict>
 					<key>4</key>
 					<dict>
@@ -148,14 +176,14 @@ fi
 						<string>0</string>
 						<key>type</key>
 						<string>0</string>
-						<key>value</key>
-						<string>/bin/zsh</string>
+						<key>uuid</key>
+						<string>4</string>
 					</dict>
 				</dict>
 				<key>isViewVisible</key>
 				<true/>
 				<key>location</key>
-				<string>449.000000:252.000000</string>
+				<string>309.000000:184.000000</string>
 				<key>nibPath</key>
 				<string>/System/Library/Automator/Run Shell Script.action/Contents/Resources/Base.lproj/main.nib</string>
 			</dict>

@@ -58,10 +58,19 @@ class MacCalendarClient:
                 "Please run: pip install pyobjc-framework-EventKit"
             )
         self.store = EventKit.EKEventStore.alloc().init()
-        self._authorized = False
+        status = 0
+        if EVENTKIT_AVAILABLE and hasattr(EventKit, "EKEventStore"):
+            status = EventKit.EKEventStore.authorizationStatusForEntityType_(0)
+        self._authorized = (status == 3)
 
     def request_access(self) -> bool:
         """Request permission to access Calendar."""
+        if EVENTKIT_AVAILABLE and hasattr(EventKit, "EKEventStore"):
+            status = EventKit.EKEventStore.authorizationStatusForEntityType_(0)
+            if status == 3:
+                self._authorized = True
+                return True
+
         done_event = threading.Event()
         access_granted = [False]
         access_error = [None]
@@ -76,7 +85,21 @@ class MacCalendarClient:
         else:
             self.store.requestAccessToEntityType_completion_(0, completion_handler)
 
-        done_event.wait(timeout=30)
+        if threading.current_thread() is threading.main_thread():
+            try:
+                import Foundation
+                run_loop = Foundation.NSRunLoop.currentRunLoop()
+                end_time = datetime.datetime.now() + datetime.timedelta(seconds=5)
+                while not done_event.is_set() and datetime.datetime.now() < end_time:
+                    run_loop.runMode_beforeDate_(
+                        Foundation.NSDefaultRunLoopMode,
+                        Foundation.NSDate.dateWithTimeIntervalSinceNow_(0.1)
+                    )
+            except Exception:
+                done_event.wait(timeout=5)
+        else:
+            done_event.wait(timeout=5)
+
         self._authorized = access_granted[0]
         return self._authorized
 

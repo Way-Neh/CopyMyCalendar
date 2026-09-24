@@ -118,27 +118,56 @@ class SyncEngine:
 
     def __init__(
         self,
-        mac_client,
-        state_store: SyncStateStore,
-        source_calendar_id: str,
-        target_calendar_id: str,
+        mac_client=None,
+        state_store: SyncStateStore = None,
+        source_calendar_id: str = "",
+        target_calendar_id: str = "",
         source_calendar_name: str = "Source",
         target_calendar_name: str = "Target",
         days_past: int = 365,
-        days_future: int = 730
+        days_future: int = 730,
+        source_client=None,
+        target_client=None,
     ):
-        self.mac_client = mac_client
         self.state_store = state_store
-        self.source_calendar_id = source_calendar_id
-        self.target_calendar_id = target_calendar_id
+        self.source_calendar_id = str(source_calendar_id)
+        self.target_calendar_id = str(target_calendar_id)
         self.source_calendar_name = source_calendar_name
         self.target_calendar_name = target_calendar_name
         self.days_past = days_past
         self.days_future = days_future
 
+        # Automatically resolve source client
+        if source_client is not None:
+            self.source_client = source_client
+        elif self.source_calendar_id.startswith("outlook:") or (self.source_calendar_id.isdigit() and len(self.source_calendar_id) < 8):
+            try:
+                from outlook_calendar import OutlookCalendarClient
+                self.source_client = OutlookCalendarClient()
+            except Exception as e:
+                logger.warning(f"Could not load OutlookCalendarClient, falling back: {e}")
+                self.source_client = mac_client
+        else:
+            self.source_client = mac_client
+
+        # Automatically resolve target client
+        if target_client is not None:
+            self.target_client = target_client
+        elif self.target_calendar_id.startswith("outlook:") or (self.target_calendar_id.isdigit() and len(self.target_calendar_id) < 8):
+            try:
+                from outlook_calendar import OutlookCalendarClient
+                self.target_client = OutlookCalendarClient()
+            except Exception as e:
+                self.target_client = mac_client
+        else:
+            self.target_client = mac_client
+
+        # Backward compatibility alias
+        self.mac_client = self.target_client or self.source_client
+
     def clear_target_calendar(self, start_date: Optional[datetime.datetime] = None, end_date: Optional[datetime.datetime] = None) -> int:
         """Delete ALL events in the target calendar ID and reset state."""
-        deleted_count = self.mac_client.clear_calendar(
+        deleted_count = self.target_client.clear_calendar(
             calendar_id=self.target_calendar_id,
             start_date=start_date,
             end_date=end_date
@@ -165,7 +194,7 @@ class SyncEngine:
         end_date: datetime.datetime
     ) -> Tuple[List[Dict[str, Any]], List[Tuple[Dict[str, Any], str]], List[Tuple[str, str]], List[Dict[str, Any]], List[Dict[str, Any]]]:
         """Compute differences between source and target calendars using unique calendar IDs."""
-        source_events = self.mac_client.get_events_by_calendar_id(
+        source_events = self.source_client.get_events_by_calendar_id(
             calendar_id=self.source_calendar_id,
             start_date=start_date,
             end_date=end_date
@@ -186,8 +215,8 @@ class SyncEngine:
                 mapping = existing_mappings[src_id]
                 target_id = mapping["target_event_id"]
                 target_still_exists = True
-                if hasattr(self.mac_client, "event_exists"):
-                    target_still_exists = self.mac_client.event_exists(target_id)
+                if hasattr(self.target_client, "event_exists"):
+                    target_still_exists = self.target_client.event_exists(target_id)
 
                 if not target_still_exists:
                     to_create.append(ev)
@@ -231,7 +260,7 @@ class SyncEngine:
         if not dry_run:
             for ev in to_create:
                 try:
-                    target_id = self.mac_client.create_event(
+                    target_id = self.target_client.create_event(
                         target_calendar_id=self.target_calendar_id,
                         event_data=ev
                     )
@@ -250,9 +279,9 @@ class SyncEngine:
 
             for ev, target_id in to_update:
                 try:
-                    updated = self.mac_client.update_event(target_id, ev)
+                    updated = self.target_client.update_event(target_id, ev)
                     if not updated:
-                        target_id = self.mac_client.create_event(
+                        target_id = self.target_client.create_event(
                             target_calendar_id=self.target_calendar_id,
                             event_data=ev
                         )
@@ -271,7 +300,7 @@ class SyncEngine:
 
             for src_id, target_id in to_delete:
                 try:
-                    self.mac_client.delete_event(target_id)
+                    self.target_client.delete_event(target_id)
                     self.state_store.remove_mapping(src_id)
                     log_entries.append(f"[DELETED]    | {'-':<22} | Target Event ID: {target_id}")
                 except Exception as e:
@@ -280,8 +309,8 @@ class SyncEngine:
             for ev in unchanged:
                 log_entries.append(f"[UNCHANGED]  | {self._format_dt(ev['start']):<22} | {ev['title']}")
 
-            if hasattr(self.mac_client, "commit"):
-                self.mac_client.commit()
+            if hasattr(self.target_client, "commit"):
+                self.target_client.commit()
 
             self.state_store.set_meta("last_sync_time", now.isoformat())
             self.state_store.set_meta("source_calendar_id", self.source_calendar_id)
