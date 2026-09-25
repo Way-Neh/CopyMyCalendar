@@ -20,6 +20,7 @@ import yaml
 import plistlib
 import threading
 import subprocess
+import fcntl
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
@@ -128,6 +129,22 @@ def get_app_data_path(filename: str) -> str:
 CONFIG_FILE = get_app_data_path("config.yaml")
 LAUNCH_AGENT_LABEL = "com.sendtogmail.calendarsync"
 LAUNCH_AGENT_PATH = Path.home() / "Library" / "LaunchAgents" / f"{LAUNCH_AGENT_LABEL}.plist"
+
+_LOCK_FILE_HANDLE = None
+
+
+def acquire_single_instance_lock() -> bool:
+    """Ensure only one instance of CalendarSync GUI runs at a time."""
+    global _LOCK_FILE_HANDLE
+    lock_path = get_app_data_path("calendarsync.lock")
+    try:
+        _LOCK_FILE_HANDLE = open(lock_path, "w")
+        fcntl.flock(_LOCK_FILE_HANDLE, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _LOCK_FILE_HANDLE.write(f"{os.getpid()}\n")
+        _LOCK_FILE_HANDLE.flush()
+        return True
+    except (IOError, OSError):
+        return False
 
 
 # ==============================================================================
@@ -2021,6 +2038,10 @@ class AppDelegate(NSObject):
 
 def main():
     """Main launcher for CalendarSync native macOS application."""
+    if not acquire_single_instance_lock():
+        print("[CalendarSync] Another instance is already running. Exiting.", file=sys.stderr)
+        return 0
+
     try:
         from Foundation import NSProcessInfo
         NSProcessInfo.processInfo().setProcessName_("CalendarSync")

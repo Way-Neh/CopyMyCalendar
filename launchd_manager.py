@@ -30,7 +30,8 @@ class LaunchdManager:
             "Label": PLIST_LABEL,
             "ProgramArguments": [
                 "/bin/zsh",
-                self.wrapper_script
+                self.wrapper_script,
+                "sync"
             ],
             "WorkingDirectory": self.project_dir,
             "StartInterval": self.interval_seconds,
